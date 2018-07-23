@@ -116,6 +116,7 @@ const unsigned long intervalTemp = 60000;   // Do a temperature measurement ever
 unsigned long prevTemp = 0;
 bool tmpRequested = false;
 const unsigned long DS_delay = 750;         // Reading the temperature from the DS18x20 can take up to 750ms
+unsigned long availableBytes = 0;
 
 uint32_t timeUNIX = 0;                      // The most recent timestamp received from the time server
 
@@ -196,6 +197,18 @@ void loop() {
 
   server.handleClient();                      // run the server
   ArduinoOTA.handle();                        // listen for OTA events
+
+  FSInfo fsinfo;
+  SPIFFS.info(fsinfo);
+
+  Serial.print("Total Bytes: ");
+  Serial.print(fsinfo.totalBytes);
+  Serial.print(" Used Bytes: ");
+  Serial.print(fsinfo.usedBytes);
+  availableBytes = fsinfo.totalBytes - fsinfo.usedBytes;   // Have the answer on the left side of one equals sign
+  Serial.print(" Available Bytes: ");
+  Serial.println(availableBytes);
+
 }
 
 /*__________________________________________________________SETUP_FUNCTIONS__________________________________________________________*/
