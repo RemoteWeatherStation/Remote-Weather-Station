@@ -140,7 +140,7 @@ void loop() {
   }
 
   if (timeUNIX != 0) {
-    if (currentMillis - prevNTP > intervalNTP) {  // Every minute, request the temperature
+    if (currentMillis - prevTemp > intervalTemp) {  // Every minute, request the temperature
       
       uint32_t actualTime = timeUNIX + (currentMillis - lastNTPResponse) / 1000;
       // The actual time is the last NTP time plus the time that has elapsed since the last NTP response
