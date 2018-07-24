@@ -214,7 +214,7 @@ void loop() {
 /*__________________________________________________________SETUP_FUNCTIONS__________________________________________________________*/
 
 void startWiFi() { // Try to connect to some given access points. Then wait for a connection
-  wifiMulti.addAP("Embecosm-Guest", "cuttlefish");   // add Wi-Fi networks you want to connect to
+  wifiMulti.addAP("Network Name", "Network Password");   // add Wi-Fi networks you want to connect to
 
 
   Serial.println("Connecting");
