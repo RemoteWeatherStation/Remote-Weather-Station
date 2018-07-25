@@ -31,7 +31,7 @@ const char* mdnsName = "esp8266";        // Domain name for the mDNS responder
 
 WiFiUDP UDP;                   // Create an instance of the WiFiUDP class to send and receive UDP messages
 
-IPAddress timeServerIP;        // The time.nist.gov NTP server's IP address
+IPAddress timeServerIP;        // The ntp1.np1.co.uk NTP server's IP address
 const char* ntpServerName = "ntp1.npl.co.uk";
 
 const int NTP_PACKET_SIZE = 48;          // NTP time stamp is in the first 48 bytes of the message
