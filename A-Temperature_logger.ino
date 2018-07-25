@@ -31,7 +31,7 @@ const char* mdnsName = "esp8266";        // Domain name for the mDNS responder
 
 WiFiUDP UDP;                   // Create an instance of the WiFiUDP class to send and receive UDP messages
 
-IPAddress timeServerIP;        // The ntp1.np1.co.uk NTP server's IP address
+IPAddress timeServerIP;        // The time.nist.gov NTP server's IP address
 const char* ntpServerName = "ntp1.npl.co.uk";
 
 const int NTP_PACKET_SIZE = 48;          // NTP time stamp is in the first 48 bytes of the message
@@ -110,40 +110,25 @@ void setup() {
 
 const unsigned long intervalNTP = ONE_HOUR; // Update the time every hour
 unsigned long prevNTP = 0;
-unsigned long lastNTPResponse = millis();
 
 const unsigned long intervalTemp = 60000;   // Do a temperature measurement every minute
 unsigned long prevTemp = 0;
 bool tmpRequested = false;
 const unsigned long DS_delay = 750;         // Reading the temperature from the DS18x20 can take up to 750ms
-unsigned long availableBytes = 0;
 
 uint32_t timeUNIX = 0;                      // The most recent timestamp received from the time server
 
 void loop() {
-  unsigned long currentMillis = millis();
-  if (currentMillis - prevNTP > intervalNTP) { // Request the time from the time server every hour
-    prevNTP = currentMillis;
     sendNTPpacket(timeServerIP);
-  }
 
   uint32_t time = getTime();                   // Check if the time server has responded, if so, get the UNIX time
   if (time) {
     timeUNIX = time;
     Serial.print("NTP response:\t");
     Serial.println(timeUNIX);
-    lastNTPResponse = millis();
-  } else if ((millis() - lastNTPResponse) > 24UL * ONE_HOUR) {
-    Serial.println("More than 24 hours since last NTP response. Rebooting.");
-    Serial.flush();
-    ESP.reset();
   }
-
+  
   if (timeUNIX != 0) {
-    if (currentMillis - prevTemp > intervalTemp) {  // Every minute, request the temperature
-       prevTemp = currentMillis;
-      
-      uint32_t actualTime = timeUNIX + (currentMillis - lastNTPResponse) / 1000;
       // The actual time is the last NTP time plus the time that has elapsed since the last NTP response
       myCCS811.dataAvailable();
       myCCS811.readAlgorithmResults();
@@ -156,65 +141,53 @@ void loop() {
 
       myCCS811.setEnvironmentalData(Humid,Temp);
 
-      Serial.printf("Appending temperature to file: %lu,", actualTime);
+      Serial.printf("Appending temperature to file: %lu,", timeUNIX);
       Serial.println(Temp);
       File tempLog = SPIFFS.open("/temp.csv", "a"); // Write the time and the temperature to the csv file
-      tempLog.print(actualTime);
+      tempLog.print(timeUNIX);
       tempLog.print(',');
       tempLog.println(Temp);
       tempLog.close();
 
       File humidlog = SPIFFS.open("/humid.csv", "a"); // Write the time and the temperature to the csv file
-      humidlog.print(actualTime);
+      humidlog.print(timeUNIX);
       humidlog.print(',');
       humidlog.println(Humid);
       humidlog.close();
 
       File presslog = SPIFFS.open("/press.csv", "a"); // Write the time and the temperature to the csv file
-      presslog.print(actualTime);
+      presslog.print(timeUNIX);
       presslog.print(',');
       presslog.println(Press);
       presslog.close();
 
       File co2Log = SPIFFS.open("/co2.csv", "a"); // Write the time and the temperature to the csv file
-      co2Log.print(actualTime);
+      co2Log.print(timeUNIX);
       co2Log.print(',');
       co2Log.println(CO2);
       co2Log.close();
 
       File tvocLog = SPIFFS.open("/tvoc.csv", "a"); // Write the time and the temperature to the csv file
-      tvocLog.print(actualTime);
+      tvocLog.print(timeUNIX);
       tvocLog.print(',');
       tvocLog.println(TVOC);
       tvocLog.close();
-
-
     }
-  } else {                                    // If we didn't receive an NTP response yet, send another request
+    
+   else {                                    // If we didn't receive an NTP response yet, send another request
     sendNTPpacket(timeServerIP);
     delay(500);
   }
 
   server.handleClient();                      // run the server
   ArduinoOTA.handle();                        // listen for OTA events
-
-  FSInfo fsinfo;
-  SPIFFS.info(fsinfo);
-
-  Serial.print("Total Bytes: ");
-  Serial.print(fsinfo.totalBytes);
-  Serial.print(" Used Bytes: ");
-  Serial.print(fsinfo.usedBytes);
-  availableBytes = fsinfo.totalBytes - fsinfo.usedBytes;   // Have the answer on the left side of one equals sign
-  Serial.print(" Available Bytes: ");
-  Serial.println(availableBytes);
-
+  delay(10000);
 }
 
 /*__________________________________________________________SETUP_FUNCTIONS__________________________________________________________*/
 
 void startWiFi() { // Try to connect to some given access points. Then wait for a connection
-  wifiMulti.addAP("Network Name", "Network Password");   // add Wi-Fi networks you want to connect to
+  wifiMulti.addAP("Embecosm-Guest", "cuttlefish");   // add Wi-Fi networks you want to connect to
 
 
   Serial.println("Connecting");
