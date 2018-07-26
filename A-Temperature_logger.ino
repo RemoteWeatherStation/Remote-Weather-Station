@@ -25,7 +25,6 @@ File fsUploadFile;                                    // a File variable to temp
 ESP8266WiFiMulti wifiMulti;    // Create an instance of the ESP8266WiFiMulti class, called 'wifiMulti'
 
 const char *OTAName = "ESP8266";         // A name and a password for the OTA service
-const char *OTAPassword = "esp8266";
 
 const char* mdnsName = "esp8266";        // Domain name for the mDNS responder
 
@@ -38,12 +37,25 @@ const int NTP_PACKET_SIZE = 48;          // NTP time stamp is in the first 48 by
 
 byte packetBuffer[NTP_PACKET_SIZE];      // A buffer to hold incoming and outgoing packets
 
+
+const unsigned long intervalNTP = ONE_HOUR; // Update the time every hour
+unsigned long prevNTP = 0;
+
+const unsigned long intervalTemp = 60000;   // Do a temperature measurement every minute
+unsigned long prevTemp = 0;
+bool tmpRequested = false;
+const unsigned long DS_delay = 750;         // Reading the temperature from the DS18x20 can take up to 750ms
+
+uint32_t timeUNIX = 0;                      // The most recent timestamp received from the time server
+
 /*__________________________________________________________SETUP__________________________________________________________*/
 
 void setup() {
   Serial.begin(115200);        // Start the Serial communication to send messages to the computer
   delay(10);
   Serial.println("\r\n");
+
+  while(!Serial) { }
 
 
   Serial.println("Apply BME280 data to CCS811 for compensation.");
@@ -104,35 +116,17 @@ void setup() {
 
   sendNTPpacket(timeServerIP);
   delay(500);
-}
 
-/*__________________________________________________________LOOP__________________________________________________________*/
-
-const unsigned long intervalNTP = ONE_HOUR; // Update the time every hour
-unsigned long prevNTP = 0;
-
-const unsigned long intervalTemp = 60000;   // Do a temperature measurement every minute
-unsigned long prevTemp = 0;
-bool tmpRequested = false;
-const unsigned long DS_delay = 750;         // Reading the temperature from the DS18x20 can take up to 750ms
-
-uint32_t timeUNIX = 0;                      // The most recent timestamp received from the time server
-
-void loop() {
-    sendNTPpacket(timeServerIP);
-
-  uint32_t time = getTime();                   // Check if the time server has responded, if so, get the UNIX time
+    uint32_t time = getTime();                   // Check if the time server has responded, if so, get the UNIX time
   if (time) {
     timeUNIX = time;
     Serial.print("NTP response:\t");
     Serial.println(timeUNIX);
   }
-  
-  if (timeUNIX != 0) {
+   
       // The actual time is the last NTP time plus the time that has elapsed since the last NTP response
       myCCS811.dataAvailable();
       myCCS811.readAlgorithmResults();
-      tmpRequested = false;
       float Temp = myBME280.readTempC();  // Get the temperature from the sensor
       float Humid = myBME280.readFloatHumidity();  // Get the humidity from the sensor
       float Press = myBME280.readFloatPressure(); //Get the pressure from the sensor
@@ -172,16 +166,20 @@ void loop() {
       tvocLog.print(',');
       tvocLog.println(TVOC);
       tvocLog.close();
-    }
-    
-   else {                                    // If we didn't receive an NTP response yet, send another request
-    sendNTPpacket(timeServerIP);
-    delay(500);
-  }
 
   server.handleClient();                      // run the server
   ArduinoOTA.handle();                        // listen for OTA events
-  delay(10000);
+
+    ESP.deepSleep(10e6); // 20e6 is 20 microseconds
+    delay(100);
+}
+
+/*__________________________________________________________LOOP__________________________________________________________*/
+
+
+void loop() {
+
+  
 }
 
 /*__________________________________________________________SETUP_FUNCTIONS__________________________________________________________*/
@@ -212,7 +210,6 @@ void startUDP() {
 
 void startOTA() { // Start the OTA service
   ArduinoOTA.setHostname(OTAName);
-  ArduinoOTA.setPassword(OTAPassword);
 
   ArduinoOTA.onStart([]() {
     Serial.println("Start");
