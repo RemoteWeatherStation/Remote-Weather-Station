@@ -126,6 +126,7 @@ void setup() {
    
       // The actual time is the last NTP time plus the time that has elapsed since the last NTP response
       myCCS811.dataAvailable();
+      delay(750);
       myCCS811.readAlgorithmResults();
       float Temp = myBME280.readTempC();  // Get the temperature from the sensor
       float Humid = myBME280.readFloatHumidity();  // Get the humidity from the sensor
@@ -169,6 +170,9 @@ void setup() {
 
   server.handleClient();                      // run the server
   ArduinoOTA.handle();                        // listen for OTA events
+
+
+    delay(1000);
 
     ESP.deepSleep(10e6); // 20e6 is 20 microseconds
     delay(100);
