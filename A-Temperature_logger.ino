@@ -8,6 +8,9 @@
 #include <Wire.h>
 #include <SparkFunBME280.h>
 #include <SparkFunCCS811.h>
+extern "C" {
+#include "user_interface.h"
+}
 
 #define ONE_HOUR 3600000UL
 
@@ -55,7 +58,6 @@ void setup() {
   delay(10);
   Serial.println("\r\n");
 
-  while(!Serial) { }
 
 
   Serial.println("Apply BME280 data to CCS811 for compensation.");
@@ -117,6 +119,37 @@ void setup() {
   sendNTPpacket(timeServerIP);
   delay(500);
 
+    
+//WiFi.mode(WIFI_OFF);
+wifi_set_sleep_type(LIGHT_SLEEP_T);
+WiFi.forceSleepBegin();
+delay (1000);
+// ~22ma
+    
+
+
+}
+
+/*__________________________________________________________LOOP__________________________________________________________*/
+
+
+void loop() {
+
+    startWiFi();                 // Start a Wi-Fi access point, and try to connect to some given access points. Then wait for either an AP or STA connection
+
+  startOTA();                  // Start the OTA service
+
+  startSPIFFS();               // Start the SPIFFS and list all contents
+
+  startMDNS();                 // Start the mDNS responder
+
+  startServer();               // Start a HTTP server with a file read handler and an upload handler
+
+  startUDP();                  // Start listening for UDP messages to port 123
+
+  sendNTPpacket(timeServerIP);
+  delay(500);
+
     uint32_t time = getTime();                   // Check if the time server has responded, if so, get the UNIX time
   if (time) {
     timeUNIX = time;
@@ -128,6 +161,7 @@ void setup() {
       myCCS811.dataAvailable();
       delay(750);
       myCCS811.readAlgorithmResults();
+      delay (750);
       float Temp = myBME280.readTempC();  // Get the temperature from the sensor
       float Humid = myBME280.readFloatHumidity();  // Get the humidity from the sensor
       float Press = myBME280.readFloatPressure(); //Get the pressure from the sensor
@@ -171,19 +205,14 @@ void setup() {
   server.handleClient();                      // run the server
   ArduinoOTA.handle();                        // listen for OTA events
 
-
     delay(1000);
 
-    ESP.deepSleep(10e6); // 20e6 is 20 microseconds
-    delay(100);
-}
-
-/*__________________________________________________________LOOP__________________________________________________________*/
-
-
-void loop() {
-
-  
+  wifi_set_opmode_current(NULL_MODE);
+wifi_fpm_set_sleep_type(LIGHT_SLEEP_T);
+wifi_fpm_open();
+wifi_fpm_set_wakeup_cb(wake_cb);
+wifi_fpm_do_sleep(15000000);     // needs to be eight digits
+delay (15000);
 }
 
 /*__________________________________________________________SETUP_FUNCTIONS__________________________________________________________*/
@@ -396,4 +425,10 @@ void printDriverError( CCS811Core::status errorCode )
       Serial.print("Unspecified error.");
   }
   Serial.println(" ");
+}
+
+void wake_cb() {
+Serial.println("wakeup");
+wifi_fpm_close();
+WiFi.forceSleepBegin();
 }
