@@ -121,7 +121,7 @@ void setup() {
 
     
 //WiFi.mode(WIFI_OFF);
-wifi_set_sleep_type(LIGHT_SLEEP_T);
+wifi_set_sleep_type(MODEM_SLEEP_T);
 WiFi.forceSleepBegin();
 delay (1000);
 // ~22ma
@@ -190,6 +190,8 @@ void loop() {
       presslog.println(Press);
       presslog.close();
 
+      Serial.printf("Appending temperature to file: %lu,", timeUNIX);
+      Serial.println(CO2);
       File co2Log = SPIFFS.open("/co2.csv", "a"); // Write the time and the temperature to the csv file
       co2Log.print(timeUNIX);
       co2Log.print(',');
@@ -205,14 +207,13 @@ void loop() {
   server.handleClient();                      // run the server
   ArduinoOTA.handle();                        // listen for OTA events
 
-    delay(1000);
+    delay(5000);
 
   wifi_set_opmode_current(NULL_MODE);
-wifi_fpm_set_sleep_type(LIGHT_SLEEP_T);
+wifi_fpm_set_sleep_type(MODEM_SLEEP_T);
 wifi_fpm_open();
 wifi_fpm_set_wakeup_cb(wake_cb);
-wifi_fpm_do_sleep(15000000);     // needs to be eight digits
-delay (15000);
+wifi_fpm_do_sleep(5000000);     // needs to be eight digits
 }
 
 /*__________________________________________________________SETUP_FUNCTIONS__________________________________________________________*/
